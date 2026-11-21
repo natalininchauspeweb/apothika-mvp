@@ -4,14 +4,18 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Transaction;
+use App\Services\PointsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class PatientPointsController extends Controller
 {
+    public function __construct(
+        private PointsService $pointsService
+    ) {}
+
     /**
-     * Devuelve el saldo actual del paciente y su historial paginado de movimientos.
-     * Permite filtrar opcionalmente por tipo (?type=purchase | trivia | redemption).
+     * Devuelve el saldo actual, nivel de fidelización y el historial paginado del paciente.
      */
     public function summary(Request $request): JsonResponse
     {
@@ -26,7 +30,6 @@ class PatientPointsController extends Controller
             $transactionsQuery->where('type', $type);
         }
 
-        // Paginación nativa de Laravel para no sobrecargar la PWA en celulares
         $transactions = $transactionsQuery->paginate(10);
 
         return response()->json([
@@ -34,6 +37,7 @@ class PatientPointsController extends Controller
             'qr_code' => $patient->qr_code,
             'dni' => $patient->dni,
             'points_per_1000_ars' => $patient->pharmacy?->points_per_1000_ars ?? 10,
+            'tier' => $this->pointsService->getPatientTier($patient),
             'transactions' => $transactions,
         ], 200);
     }

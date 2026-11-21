@@ -1,6 +1,7 @@
 <script setup>
 import { computed, inject, onMounted, ref } from 'vue';
 import {
+  Award,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -13,6 +14,7 @@ import {
   RefreshCw,
   ShoppingBag,
   Sparkles,
+  TrendingUp,
 } from 'lucide-vue-next';
 import { useAuth } from '../../composables/useAuth';
 import { useTheme } from '../../composables/useTheme';
@@ -27,6 +29,7 @@ const { pharmacyBranding } = useTheme();
 const feedback = inject(globalFeedbackKey);
 
 const pointsPer1000 = ref(10);
+const tier = ref(null);
 const transactions = ref([]);
 const pagination = ref({
   current_page: 1,
@@ -64,9 +67,20 @@ const TYPE_META = {
   },
 };
 
+const TIER_STYLES = {
+  initial: 'bg-brand-surface text-brand-primary border-gray-300',
+  plus: 'bg-brand-secondary/15 text-brand-primary border-brand-secondary',
+  ambassador: 'bg-game-gold/35 text-brand-primary border-game-gold',
+};
+
 const formattedBalance = computed(() =>
   new Intl.NumberFormat('es-AR').format(loggedUser.value.points_balance || 0)
 );
+
+const effectivePointsPer1000 = computed(() => {
+  const multiplier = tier.value?.multiplier_percent || 100;
+  return Math.floor((pointsPer1000.value * multiplier) / 100);
+});
 
 async function loadPointsData({ page = 1, silent = false } = {}) {
   if (silent) {
@@ -82,6 +96,7 @@ async function loadPointsData({ page = 1, silent = false } = {}) {
     });
 
     pointsPer1000.value = data.points_per_1000_ars ?? 10;
+    tier.value = data.tier || null;
     updateLocalPoints(data.points_balance);
 
     transactions.value = data.transactions?.data || [];
@@ -185,14 +200,74 @@ onMounted(() => {
           </p>
         </div>
 
-        <div class="rounded-xl bg-white/12 px-4 py-2.5 text-xs leading-relaxed max-w-xs">
+        <div class="rounded-xl bg-white/12 px-4 py-2.5 text-xs leading-relaxed max-w-xs space-y-0.5">
           <p class="font-bold text-game-gold">
-            +{{ pointsPer1000 }} pts cada $1.000 ARS
+            +{{ effectivePointsPer1000 }} pts cada $1.000 ARS
+            <span v-if="tier && tier.bonus_percentage > 0" class="font-semibold text-white">
+              ({{ tier.multiplier_label }} por tu nivel)
+            </span>
           </p>
           <p class="text-white/85">
             En compras de productos de venta libre (OTC), dermocosmética y perfumería.
           </p>
         </div>
+      </div>
+    </section>
+
+    <!-- Nivel del Club y Multiplicador OTC -->
+    <section v-if="tier" class="card-duo p-6 space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="inline-flex items-center gap-2">
+          <Award class="w-5 h-5 text-brand-secondary" aria-hidden="true" />
+          <h2 class="text-lg font-extrabold text-brand-primary">
+            Nivel {{ tier.level }} · {{ tier.name }}
+          </h2>
+        </div>
+
+        <span
+          class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border-2 text-xs font-extrabold"
+          :class="TIER_STYLES[tier.slug] || TIER_STYLES.initial"
+        >
+          <TrendingUp class="w-3.5 h-3.5" aria-hidden="true" />
+          <span>Multiplicador {{ tier.multiplier_label }} OTC</span>
+        </span>
+      </div>
+
+      <div class="space-y-2">
+        <div class="flex items-center justify-between text-xs font-semibold text-brand-muted">
+          <span>
+            {{ new Intl.NumberFormat('es-AR').format(tier.lifetime_points) }} pts históricos acumulados
+          </span>
+          <span v-if="tier.next_tier_name" class="font-bold text-brand-primary">
+            Meta: {{ new Intl.NumberFormat('es-AR').format(tier.next_tier_min_points) }} pts
+          </span>
+          <span v-else class="font-bold text-game-success">
+            Nivel máximo alcanzado
+          </span>
+        </div>
+
+        <div
+          role="progressbar"
+          :aria-valuenow="tier.progress_percent"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-label="Progreso hacia el próximo nivel del club"
+          class="h-3.5 w-full rounded-full bg-gray-200 overflow-hidden"
+        >
+          <div
+            class="h-full rounded-full bg-brand-secondary transition-all duration-300"
+            :style="{ width: `${tier.progress_percent}%` }"
+          />
+        </div>
+
+        <p class="text-xs text-brand-muted leading-relaxed">
+          <template v-if="tier.next_tier_name">
+            Te faltan <strong class="text-brand-primary">{{ new Intl.NumberFormat('es-AR').format(tier.points_to_next_tier) }} pts</strong> para subir a <strong class="text-brand-primary">{{ tier.next_tier_name }}</strong> y multiplicar aún más tus compras de venta libre. Canjear cupones nunca te hace bajar de nivel.
+          </template>
+          <template v-else>
+            ¡Felicitaciones! Disfrutás el multiplicador máximo ({{ tier.multiplier_label }}) en todas tus compras de venta libre. Canjear cupones nunca te hace bajar de nivel.
+          </template>
+        </p>
       </div>
     </section>
 
@@ -266,13 +341,17 @@ onMounted(() => {
       </div>
 
       <!-- Filtros por tipo -->
-      <div role="group" aria-label="Filtrar movimientos por categoría" class="flex flex-wrap gap-2">
+      <div
+        role="group"
+        aria-label="Filtrar movimientos por categoría"
+        class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2"
+      >
         <button
           v-for="option in FILTER_OPTIONS"
           :key="option.value || 'all'"
           type="button"
           :aria-pressed="activeFilter === option.value"
-          class="px-3.5 py-1.5 rounded-full text-xs font-bold border-2 transition cursor-pointer"
+          class="px-3.5 py-2 sm:py-1.5 rounded-full text-xs font-bold border-2 text-center transition cursor-pointer"
           :class="
             activeFilter === option.value
               ? 'bg-brand-primary border-brand-primary text-white'

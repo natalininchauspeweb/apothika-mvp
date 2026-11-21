@@ -10,12 +10,46 @@ use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 /**
- * Servicio centralizado de gestión de puntos.
+ * Servicio centralizado de gestión de puntos y niveles de fidelización.
  * Garantiza consistencia ACID entre el saldo del paciente (users.points_balance)
  * y el historial inmutable de movimientos (transactions).
  */
 class PointsService
 {
+    /**
+     * Escala de niveles basada en puntos históricos ganados (compras OTC + trivias).
+     * Los canjes nunca hacen perder el nivel alcanzado.
+     */
+    private const TIERS = [
+        [
+            'level' => 1,
+            'slug' => 'initial',
+            'name' => 'Inicial',
+            'min_points' => 0,
+            'multiplier_percent' => 100,
+            'multiplier_label' => '1x',
+            'bonus_percentage' => 0,
+        ],
+        [
+            'level' => 2,
+            'slug' => 'plus',
+            'name' => 'Bienestar Plus',
+            'min_points' => 500,
+            'multiplier_percent' => 125,
+            'multiplier_label' => '1,25x',
+            'bonus_percentage' => 25,
+        ],
+        [
+            'level' => 3,
+            'slug' => 'ambassador',
+            'name' => 'Embajador',
+            'min_points' => 1500,
+            'multiplier_percent' => 150,
+            'multiplier_label' => '1,5x',
+            'bonus_percentage' => 50,
+        ],
+    ];
+
     /**
      * Busca un paciente perteneciente a la farmacia indicada mediante
      * su código QR personal, DNI o correo electrónico.
@@ -23,7 +57,6 @@ class PointsService
     public function findPatientForPharmacy(Pharmacy $pharmacy, string $query): ?User
     {
         $clean = trim($query);
-        // Normalizamos un posible DNI escrito con puntos o espacios (ej: 38.456.123 -> 38456123)
         $cleanDni = preg_replace('/[^0-9]/', '', $clean);
 
         return User::query()
@@ -41,12 +74,67 @@ class PointsService
     }
 
     /**
-     * Calcula los puntos enteros a otorgar según el monto en pesos argentinos (ARS)
-     * de productos de venta libre (OTC), usando aritmética entera exacta.
+     * Devuelve la suma histórica de puntos ganados por el paciente (sin descontar canjes).
      */
-    public function calculatePointsFromOtcAmount(Pharmacy $pharmacy, int $amountArs): int
+    public function getLifetimePoints(User $patient): int
     {
-        return intdiv($amountArs * $pharmacy->points_per_1000_ars, 1000);
+        return (int) Transaction::where('patient_id', $patient->id)
+            ->where('points', '>', 0)
+            ->sum('points');
+    }
+
+    /**
+     * Calcula el nivel actual del paciente, su multiplicador OTC y progreso al próximo nivel.
+     */
+    public function getPatientTier(User $patient): array
+    {
+        $lifetimePoints = $this->getLifetimePoints($patient);
+        $currentIndex = 0;
+
+        foreach (self::TIERS as $index => $tier) {
+            if ($lifetimePoints >= $tier['min_points']) {
+                $currentIndex = $index;
+            }
+        }
+
+        $current = self::TIERS[$currentIndex];
+        $next = self::TIERS[$currentIndex + 1] ?? null;
+
+        if ($next) {
+            $span = $next['min_points'] - $current['min_points'];
+            $earnedInTier = $lifetimePoints - $current['min_points'];
+            $progressPercent = $span > 0 ? min(100, intdiv($earnedInTier * 100, $span)) : 100;
+            $pointsToNext = max(0, $next['min_points'] - $lifetimePoints);
+        } else {
+            $progressPercent = 100;
+            $pointsToNext = 0;
+        }
+
+        return [
+            'level' => $current['level'],
+            'slug' => $current['slug'],
+            'name' => $current['name'],
+            'multiplier_percent' => $current['multiplier_percent'],
+            'multiplier_label' => $current['multiplier_label'],
+            'bonus_percentage' => $current['bonus_percentage'],
+            'lifetime_points' => $lifetimePoints,
+            'next_tier_name' => $next['name'] ?? null,
+            'next_tier_min_points' => $next['min_points'] ?? null,
+            'points_to_next_tier' => $pointsToNext,
+            'progress_percent' => $progressPercent,
+        ];
+    }
+
+    /**
+     * Calcula los puntos enteros a otorgar según el monto en pesos argentinos (ARS)
+     * de productos de venta libre (OTC), aplicando el multiplicador del nivel del paciente.
+     */
+    public function calculatePointsFromOtcAmount(Pharmacy $pharmacy, int $amountArs, ?User $patient = null): int
+    {
+        $multiplierPercent = $patient ? $this->getPatientTier($patient)['multiplier_percent'] : 100;
+
+        // Aritmética entera exacta: (ARS * puntos_cada_1000 * multiplicador%) / 100.000
+        return intdiv($amountArs * $pharmacy->points_per_1000_ars * $multiplierPercent, 100000);
     }
 
     /**
@@ -59,13 +147,14 @@ class PointsService
         User $patient,
         int $points,
         ?int $amountArs = null,
-        ?string $notes = null
+        ?string $notes = null,
+        ?array $appliedTier = null
     ): array {
         if ($points <= 0) {
             throw new InvalidArgumentException('La cantidad de puntos a acreditar debe ser mayor a cero.');
         }
 
-        $description = $this->buildOtcDescription($amountArs, $notes);
+        $description = $this->buildOtcDescription($amountArs, $notes, $appliedTier);
 
         return $this->applyMovement(
             pharmacy: $pharmacy,
@@ -78,7 +167,6 @@ class PointsService
 
     /**
      * Acredita puntos por responder correctamente una trivia educativa.
-     * (Lo vamos a reutilizar en el módulo de Gamificación).
      *
      * @return array{patient: User, transaction: Transaction}
      */
@@ -101,7 +189,6 @@ class PointsService
 
     /**
      * Descuenta puntos cuando el paciente canjea un beneficio del catálogo.
-     * (Lo vamos a reutilizar en el módulo de Cupones).
      *
      * @return array{patient: User, transaction: Transaction}
      */
@@ -123,8 +210,7 @@ class PointsService
     }
 
     /**
-     * Ejecuta el movimiento dentro de una transacción ACID con bloqueo pesimista
-     * para evitar inconsistencias si llegan dos peticiones simultáneas.
+     * Ejecuta el movimiento dentro de una transacción ACID con bloqueo pesimista.
      *
      * @return array{patient: User, transaction: Transaction}
      */
@@ -137,7 +223,6 @@ class PointsService
         ?int $referenceId = null
     ): array {
         return DB::transaction(function () use ($pharmacy, $patient, $type, $pointsDelta, $description, $referenceId) {
-            // Bloqueamos la fila del paciente hasta que finalice la transacción
             $lockedPatient = User::whereKey($patient->id)
                 ->lockForUpdate()
                 ->firstOrFail();
@@ -170,13 +255,17 @@ class PointsService
     /**
      * Arma una descripción clara y auditable para el historial del paciente.
      */
-    private function buildOtcDescription(?int $amountArs, ?string $notes): string
+    private function buildOtcDescription(?int $amountArs, ?string $notes, ?array $appliedTier = null): string
     {
         $base = 'Compra en mostrador — Venta libre (OTC)';
 
         if ($amountArs !== null) {
             $formatted = number_format($amountArs, 0, ',', '.');
             $base .= " (\${$formatted} ARS)";
+        }
+
+        if ($appliedTier && ($appliedTier['multiplier_percent'] ?? 100) > 100) {
+            $base .= " · Nivel {$appliedTier['name']} {$appliedTier['multiplier_label']}";
         }
 
         if ($notes !== null && trim($notes) !== '') {
