@@ -47,3 +47,48 @@ Accept: application/json
 GET {{baseUrl}}/pharmacy/ping
 Accept: application/json
 Authorization: Bearer {{pharmacyToken}}
+
+### 8. [B2B] Buscar paciente por código QR (esperado: 200 OK — Camila)
+GET {{baseUrl}}/pharmacy/patients/lookup?q=APO-DAL-38456123
+Accept: application/json
+Authorization: Bearer {{pharmacyToken}}
+
+### 9. [B2B] Buscar paciente por DNI con puntos (esperado: 200 OK — Camila)
+GET {{baseUrl}}/pharmacy/patients/lookup?q=38.456.123
+Accept: application/json
+Authorization: Bearer {{pharmacyToken}}
+
+### 10. [B2B] Acreditar puntos por compra de venta libre OTC de $15.500 ARS (esperado: 201 Created — +155 pts)
+POST {{baseUrl}}/pharmacy/points/award
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{pharmacyToken}}
+
+{
+    "identifier": "APO-DAL-38456123",
+    "amount_ars": 15500,
+    "otc_confirmed": true,
+    "notes": "Protector solar FPS 50 + limpiador facial"
+}
+
+### 11. [B2B] Intentar acreditar SIN confirmar venta libre OTC (esperado: 422 Unprocessable Entity)
+POST {{baseUrl}}/pharmacy/points/award
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{pharmacyToken}}
+
+{
+    "identifier": "38456123",
+    "amount_ars": 10000,
+    "otc_confirmed": false
+}
+
+### 12. [B2B] Ver métricas del panel Farmacia (esperado: 200 OK)
+GET {{baseUrl}}/pharmacy/dashboard
+Accept: application/json
+Authorization: Bearer {{pharmacyToken}}
+
+### 13. [B2C] Ver saldo e historial paginado de Camila (esperado: 200 OK — saldo actualizado a 505 pts)
+GET {{baseUrl}}/patient/points
+Accept: application/json
+Authorization: Bearer {{patientToken}}

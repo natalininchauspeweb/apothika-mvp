@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\PatientPointsController;
 use App\Http\Controllers\Api\PharmacyController;
+use App\Http\Controllers\Api\PharmacyPointsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -29,17 +31,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('patient')
         ->middleware('role:patient')
         ->group(function () {
-            Route::get('/ping', fn () => response()->json([
-                'message' => 'Acceso autorizado: zona Paciente (B2C).',
-            ]));
+            Route::get('/points', [PatientPointsController::class, 'summary']);
         });
 
     // Zona exclusiva Farmacia (B2B)
     Route::prefix('pharmacy')
         ->middleware('role:pharmacy')
         ->group(function () {
-            Route::get('/ping', fn () => response()->json([
-                'message' => 'Acceso autorizado: zona Farmacia (B2B).',
-            ]));
+            Route::get('/dashboard', [PharmacyPointsController::class, 'dashboard']);
+            Route::get('/patients/lookup', [PharmacyPointsController::class, 'lookupPatient']);
+            Route::post('/points/award', [PharmacyPointsController::class, 'awardPurchasePoints']);
         });
 });
