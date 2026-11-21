@@ -1,0 +1,46 @@
+@baseUrl = http://127.0.0.1:8000/api
+@token = PEGA_ACA_EL_TOKEN_DEL_LOGIN
+
+### 1. Obtener Branding público de Farmacia Dalton (debe devolver 200 OK)
+GET {{baseUrl}}/pharmacies/farmacia-dalton/branding
+Accept: application/json
+
+### 2. Login como Paciente (Camila) — copiar el "token" de la respuesta y pegarlo arriba
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+    "email": "paciente@dalton.com.ar",
+    "password": "paciente123"
+}
+
+### 3. Ver perfil autenticado con token (debe devolver 200 OK)
+GET {{baseUrl}}/auth/me
+Accept: application/json
+Authorization: Bearer 1|LrK5ERjAPELG95I12qiUQcUKrPEb9Kp3cE7tH0ii99b2dca8
+
+### 4. Probar acceso a zona Paciente con token de Paciente (debe devolver 200 OK)
+GET {{baseUrl}}/patient/ping
+Accept: application/json
+Authorization: Bearer 1|LrK5ERjAPELG95I12qiUQcUKrPEb9Kp3cE7tH0ii99b2dca8
+
+### 5. Probar acceso a zona Farmacia con token de Paciente (DEBE devolver 403 Forbidden)
+GET {{baseUrl}}/pharmacy/ping
+Accept: application/json
+Authorization: Bearer 1|LrK5ERjAPELG95I12qiUQcUKrPEb9Kp3cE7tH0ii99b2dca8
+
+### 6. Login como Farmacia Dalton (B2B)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+    "email": "farmacia@dalton.com.ar",
+    "password": "dalton123"
+}
+
+### 7. Acceso a zona Farmacia con token de Farmacia (esperado: 200 OK)
+GET {{baseUrl}}/pharmacy/ping
+Accept: application/json
+Authorization: Bearer 2|8oRBLV6tZPUWcwldk21rYEeXWZ1K78kWLJq5xJcX7df0450e
