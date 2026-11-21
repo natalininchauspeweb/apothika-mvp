@@ -1,11 +1,13 @@
 @baseUrl = http://127.0.0.1:8000/api
-@token = PEGA_ACA_EL_TOKEN_DEL_LOGIN
+@patientToken = {{loginPatient.response.body.token}}
+@pharmacyToken = {{loginPharmacy.response.body.token}}
 
-### 1. Obtener Branding público de Farmacia Dalton (debe devolver 200 OK)
+### 1. Obtener Branding público de Farmacia Dalton (esperado: 200 OK)
 GET {{baseUrl}}/pharmacies/farmacia-dalton/branding
 Accept: application/json
 
-### 2. Login como Paciente (Camila) — copiar el "token" de la respuesta y pegarlo arriba
+### 2. Login como Paciente — Camila (esperado: 200 OK)
+# @name loginPatient
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 Accept: application/json
@@ -15,22 +17,23 @@ Accept: application/json
     "password": "paciente123"
 }
 
-### 3. Ver perfil autenticado con token (debe devolver 200 OK)
+### 3. Ver perfil autenticado de Camila (esperado: 200 OK)
 GET {{baseUrl}}/auth/me
 Accept: application/json
-Authorization: Bearer 1|LrK5ERjAPELG95I12qiUQcUKrPEb9Kp3cE7tH0ii99b2dca8
+Authorization: Bearer {{patientToken}}
 
-### 4. Probar acceso a zona Paciente con token de Paciente (debe devolver 200 OK)
+### 4. Acceso a zona Paciente con token de Paciente (esperado: 200 OK)
 GET {{baseUrl}}/patient/ping
 Accept: application/json
-Authorization: Bearer 1|LrK5ERjAPELG95I12qiUQcUKrPEb9Kp3cE7tH0ii99b2dca8
+Authorization: Bearer {{patientToken}}
 
-### 5. Probar acceso a zona Farmacia con token de Paciente (DEBE devolver 403 Forbidden)
+### 5. Acceso a zona Farmacia con token de Paciente (esperado: 403 Forbidden)
 GET {{baseUrl}}/pharmacy/ping
 Accept: application/json
-Authorization: Bearer 1|LrK5ERjAPELG95I12qiUQcUKrPEb9Kp3cE7tH0ii99b2dca8
+Authorization: Bearer {{patientToken}}
 
-### 6. Login como Farmacia Dalton (B2B)
+### 6. Login como Farmacia Dalton — B2B (esperado: 200 OK)
+# @name loginPharmacy
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 Accept: application/json
@@ -43,4 +46,4 @@ Accept: application/json
 ### 7. Acceso a zona Farmacia con token de Farmacia (esperado: 200 OK)
 GET {{baseUrl}}/pharmacy/ping
 Accept: application/json
-Authorization: Bearer 2|8oRBLV6tZPUWcwldk21rYEeXWZ1K78kWLJq5xJcX7df0450e
+Authorization: Bearer {{pharmacyToken}}
