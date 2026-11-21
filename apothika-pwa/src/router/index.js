@@ -5,6 +5,9 @@ import { useTheme } from '../composables/useTheme';
 import LoginView from '../views/auth/LoginView.vue';
 import RegisterView from '../views/auth/RegisterView.vue';
 import PatientHomeView from '../views/patient/PatientHomeView.vue';
+import PatientTriviasView from '../views/patient/PatientTriviasView.vue';
+import PatientRewardsView from '../views/patient/PatientRewardsView.vue';
+import PatientCouponsView from '../views/patient/PatientCouponsView.vue';
 import PharmacyDashboardView from '../views/pharmacy/PharmacyDashboardView.vue';
 
 const routes = [
@@ -51,6 +54,39 @@ const routes = [
     },
   },
   {
+    path: '/paciente/trivias',
+    name: 'patient.trivias',
+    component: PatientTriviasView,
+    meta: {
+      requiresAuth: true,
+      role: 'patient',
+      theme: 'b2c',
+      title: 'Trivias de bienestar',
+    },
+  },
+  {
+    path: '/paciente/beneficios',
+    name: 'patient.rewards',
+    component: PatientRewardsView,
+    meta: {
+      requiresAuth: true,
+      role: 'patient',
+      theme: 'b2c',
+      title: 'Catálogo de beneficios',
+    },
+  },
+  {
+    path: '/paciente/cupones',
+    name: 'patient.coupons',
+    component: PatientCouponsView,
+    meta: {
+      requiresAuth: true,
+      role: 'patient',
+      theme: 'b2c',
+      title: 'Mis cupones',
+    },
+  },
+  {
     path: '/farmacia',
     name: 'pharmacy.dashboard',
     component: PharmacyDashboardView,
@@ -75,12 +111,6 @@ const router = createRouter({
   },
 });
 
-/**
- * Navigation Guard global:
- * 1. Bloquea rutas privadas si no hay sesión activa.
- * 2. Evita que usuarios logueados vuelvan a /login o /registro.
- * 3. Impide accesos cruzados entre rol 'patient' (B2C) y 'pharmacy' (B2B).
- */
 router.beforeEach((to) => {
   const user = getLoggedUserSnapshot();
   const isAuthenticated = Boolean(user.id);
@@ -104,10 +134,6 @@ router.beforeEach((to) => {
   return true;
 });
 
-/**
- * Aplica el motor de marca blanca (B2C) o identidad fija APOTHIKA (B2B)
- * y actualiza el título del documento según la ruta activa.
- */
 router.afterEach((to) => {
   const user = getLoggedUserSnapshot();
   const { applyPatientTheme, applyPharmacyB2BTheme, pharmacyBranding } = useTheme();

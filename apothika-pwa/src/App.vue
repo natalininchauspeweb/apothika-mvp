@@ -1,7 +1,15 @@
 <script setup>
 import { onMounted, provide, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { LogOut, Store, User } from 'lucide-vue-next';
+import {
+  Gift,
+  Home,
+  LogOut,
+  Sparkles,
+  Store,
+  Ticket,
+  User,
+} from 'lucide-vue-next';
 import { logout, syncAuthSession } from './services/auth';
 import { useAuth } from './composables/useAuth';
 import { useTheme } from './composables/useTheme';
@@ -12,6 +20,13 @@ const router = useRouter();
 const route = useRoute();
 const { loggedUser } = useAuth();
 const { pharmacyBranding, loadPublicBranding, applyPatientTheme, applyPharmacyB2BTheme } = useTheme();
+
+const PATIENT_NAV_ITEMS = [
+  { name: 'patient.home', label: 'Inicio', icon: Home },
+  { name: 'patient.trivias', label: 'Trivias', icon: Sparkles },
+  { name: 'patient.rewards', label: 'Beneficios', icon: Gift },
+  { name: 'patient.coupons', label: 'Cupones', icon: Ticket },
+];
 
 const feedback = ref({
   message: null,
@@ -40,7 +55,6 @@ function showFeedback({ message, type = 'info', closable = true, duration = 5000
   }
 }
 
-// Proveemos el sistema de notificaciones globales mediante Symbol (sin prop drilling)
 provide(globalFeedbackKey, {
   show: showFeedback,
   clear: clearFeedback,
@@ -56,10 +70,8 @@ async function handleLogout() {
 }
 
 onMounted(async () => {
-  // 1. Cargamos el branding público desde la API (caso piloto: Farmacia Dalton)
   await loadPublicBranding();
 
-  // 2. Si había un token guardado en localStorage, verificamos contra /api/auth/me
   const freshUser = await syncAuthSession();
 
   if (freshUser) {
@@ -69,15 +81,17 @@ onMounted(async () => {
       applyPatientTheme(freshUser.pharmacy);
     }
   } else if (route.meta.requiresAuth) {
-    // Si el token venció o fue revocado, redirigimos a login
     await router.push({ name: 'login' });
   }
 });
 </script>
 
 <template>
-  <div class="min-h-dvh flex flex-col bg-brand-surface text-brand-text transition-colors duration-200">
-    <!-- Encabezado superior visible únicamente cuando hay sesión iniciada -->
+  <div
+    class="min-h-dvh flex flex-col bg-brand-surface text-brand-text transition-colors duration-200"
+    :class="loggedUser.role === 'patient' ? 'pb-20 md:pb-8' : 'pb-8'"
+  >
+    <!-- Encabezado superior -->
     <header
       v-if="loggedUser.id"
       class="sticky top-0 z-30 border-b-2 border-black/10"
@@ -86,7 +100,7 @@ onMounted(async () => {
       <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
         <RouterLink
           :to="loggedUser.role === 'pharmacy' ? { name: 'pharmacy.dashboard' } : { name: 'patient.home' }"
-          class="inline-flex items-center gap-2.5 font-heading font-extrabold text-lg tracking-tight"
+          class="inline-flex items-center gap-2.5 font-heading font-extrabold text-lg tracking-tight shrink-0"
         >
           <span
             class="w-8 h-8 rounded-xl inline-flex items-center justify-center shrink-0"
@@ -100,7 +114,30 @@ onMounted(async () => {
           </span>
         </RouterLink>
 
-        <nav aria-label="Acciones de cuenta" class="flex items-center gap-3">
+        <!-- Navegación de escritorio para Pacientes (B2C) -->
+        <nav
+          v-if="loggedUser.role === 'patient'"
+          aria-label="Navegación principal"
+          class="hidden md:flex items-center gap-1"
+        >
+          <RouterLink
+            v-for="item in PATIENT_NAV_ITEMS"
+            :key="item.name"
+            :to="{ name: item.name }"
+            :aria-current="route.name === item.name ? 'page' : undefined"
+            class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition"
+            :class="
+              route.name === item.name
+                ? 'bg-brand-secondary text-white'
+                : 'text-white/80 hover:bg-white/10 hover:text-white'
+            "
+          >
+            <component :is="item.icon" class="w-4 h-4" aria-hidden="true" />
+            <span>{{ item.label }}</span>
+          </RouterLink>
+        </nav>
+
+        <div class="flex items-center gap-3 shrink-0">
           <span class="hidden sm:inline text-xs font-medium text-white/85">
             {{ loggedUser.name }}
           </span>
@@ -113,19 +150,41 @@ onMounted(async () => {
             <LogOut class="w-4 h-4" aria-hidden="true" />
             <span>Salir</span>
           </button>
-        </nav>
+        </div>
       </div>
     </header>
 
     <!-- Notificación global inyectada vía provide/inject -->
-    <div
-      v-if="feedback.message"
-      class="max-w-3xl w-full mx-auto px-4 pt-4"
-    >
+    <div v-if="feedback.message" class="max-w-3xl w-full mx-auto px-4 pt-4">
       <NotificationBox :content="feedback" @close="clearFeedback" />
     </div>
 
-    <!-- Vista activa según Vue Router -->
+    <!-- Vista activa -->
     <RouterView />
+
+    <!-- Barra de navegación inferior móvil para Pacientes (B2C) -->
+    <nav
+      v-if="loggedUser.role === 'patient'"
+      aria-label="Navegación móvil"
+      class="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t-2 border-gray-200 px-2 py-1.5"
+    >
+      <ul class="grid grid-cols-4 gap-1 max-w-md mx-auto">
+        <li v-for="item in PATIENT_NAV_ITEMS" :key="item.name">
+          <RouterLink
+            :to="{ name: item.name }"
+            :aria-current="route.name === item.name ? 'page' : undefined"
+            class="flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl text-[11px] font-bold transition"
+            :class="
+              route.name === item.name
+                ? 'text-brand-secondary bg-brand-secondary/10'
+                : 'text-brand-muted hover:text-brand-primary'
+            "
+          >
+            <component :is="item.icon" class="w-5 h-5" aria-hidden="true" />
+            <span>{{ item.label }}</span>
+          </RouterLink>
+        </li>
+      </ul>
+    </nav>
   </div>
 </template>
