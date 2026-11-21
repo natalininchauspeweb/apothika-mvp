@@ -10,6 +10,9 @@ class Trivia extends Model
 {
     use HasFactory;
 
+    // Indicamos explícitamente el nombre de la tabla porque 'trivia' es incontable en inglés
+    protected $table = 'trivias';
+
     protected $fillable = [
         'category',
         'question',
