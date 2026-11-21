@@ -92,3 +92,60 @@ Authorization: Bearer {{pharmacyToken}}
 GET {{baseUrl}}/patient/points
 Accept: application/json
 Authorization: Bearer {{patientToken}}
+
+### 14. [B2C] Listar trivias disponibles (esperado: 200 OK — sin respuesta correcta visible)
+GET {{baseUrl}}/patient/trivias
+Accept: application/json
+Authorization: Bearer {{patientToken}}
+
+### 15. [B2C] Responder Trivia #1 correctamente (esperado: 200 OK — +30 pts y explicación)
+POST {{baseUrl}}/patient/trivias/1/answer
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{patientToken}}
+
+{
+    "selected_option_index": 1
+}
+
+### 16. [B2C] Intentar responder Trivia #1 de nuevo (esperado: 422 — bloquea puntos duplicados)
+POST {{baseUrl}}/patient/trivias/1/answer
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{patientToken}}
+
+{
+    "selected_option_index": 1
+}
+
+### 17. [B2C] Ver catálogo de beneficios activos (esperado: 200 OK)
+GET {{baseUrl}}/patient/rewards
+Accept: application/json
+Authorization: Bearer {{patientToken}}
+
+### 18. [B2C] Canjear Beneficio #1 — Control de Presión 50 pts (esperado: 201 Created)
+# @name redeemCoupon
+POST {{baseUrl}}/patient/rewards/1/redeem
+Accept: application/json
+Authorization: Bearer {{patientToken}}
+
+### 19. [B2B] Validar en caja el cupón recién canjeado (esperado: 200 OK — pasa a "used")
+@lastCouponCode = {{redeemCoupon.response.body.coupon.redeem_code}}
+POST {{baseUrl}}/pharmacy/coupons/validate
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{pharmacyToken}}
+
+{
+    "redeem_code": "{{lastCouponCode}}"
+}
+
+### 20. [B2B] Intentar validar el mismo cupón dos veces (esperado: 422 — ya utilizado)
+POST {{baseUrl}}/pharmacy/coupons/validate
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{pharmacyToken}}
+
+{
+    "redeem_code": "{{lastCouponCode}}"
+}
