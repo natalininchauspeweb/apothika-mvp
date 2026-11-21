@@ -1,0 +1,17 @@
+# Archivos de entorno con claves sensibles (nunca subir a Git)
+.env
+.env.*
+!.env.example
+
+# Dependencias generadas por Composer y NPM
+vendor/
+node_modules/
+
+# Archivos de compilación y caché
+dist/
+.DS_Store
+Thumbs.db
+
+# Carpetas locales de editores
+.vscode/
+.idea/
