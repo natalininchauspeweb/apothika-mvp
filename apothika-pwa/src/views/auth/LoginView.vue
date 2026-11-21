@@ -8,6 +8,7 @@ import { globalFeedbackKey } from '../../symbols/inject';
 import BaseLabel from '../../components/form/BaseLabel.vue';
 import BaseInput from '../../components/form/BaseInput.vue';
 import LoaderButton from '../../components/form/LoaderButton.vue';
+import BasePasswordInput from '../../components/form/BasePasswordInput.vue';
 
 const router = useRouter();
 const { pharmacyBranding } = useTheme();
@@ -107,12 +108,11 @@ function fillDemoCredentials(email, password) {
             </p>
           </div>
 
-          <div>
+        <div>
             <BaseLabel for="login-password">Contraseña</BaseLabel>
-            <BaseInput
+            <BasePasswordInput
               id="login-password"
               v-model="form.password"
-              type="password"
               autocomplete="current-password"
               placeholder="Ingresá tu contraseña"
               :has-error="Boolean(fieldErrors.password)"

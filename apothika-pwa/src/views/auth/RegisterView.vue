@@ -1,12 +1,13 @@
 <script setup>
-import { inject, ref } from 'vue';
+import { computed, inject, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { Sparkles, UserPlus } from 'lucide-vue-next';
+import { Check, Circle, Sparkles, UserPlus } from 'lucide-vue-next';
 import { register } from '../../services/auth';
 import { useTheme } from '../../composables/useTheme';
 import { globalFeedbackKey } from '../../symbols/inject';
 import BaseLabel from '../../components/form/BaseLabel.vue';
 import BaseInput from '../../components/form/BaseInput.vue';
+import BasePasswordInput from '../../components/form/BasePasswordInput.vue';
 import LoaderButton from '../../components/form/LoaderButton.vue';
 
 const router = useRouter();
@@ -24,6 +25,14 @@ const form = ref({
 const fieldErrors = ref({});
 const isLoading = ref(false);
 
+const passwordChecks = computed(() => {
+  const pwd = form.value.password || '';
+  return [
+    { label: 'Al menos 8 caracteres', met: pwd.length >= 8 },
+    { label: 'Al menos una letra y un número', met: /[a-zA-Z]/.test(pwd) && /[0-9]/.test(pwd) },
+  ];
+});
+
 async function handleSubmit() {
   if (isLoading.value) return;
 
@@ -32,7 +41,6 @@ async function handleSubmit() {
   feedback.clear();
 
   try {
-    // Limpiamos puntos o espacios si el paciente escribió el DNI formateado
     const cleanDni = form.value.dni.replace(/[^0-9]/g, '');
 
     const user = await register({
@@ -132,15 +140,27 @@ async function handleSubmit() {
 
           <div>
             <BaseLabel for="register-password">Contraseña</BaseLabel>
-            <BaseInput
+            <BasePasswordInput
               id="register-password"
               v-model="form.password"
-              type="password"
               autocomplete="new-password"
-              placeholder="Mínimo 6 caracteres"
+              placeholder="Mínimo 8 caracteres, letras y números"
+              aria-describedby="password-requirements"
               :has-error="Boolean(fieldErrors.password)"
               required
             />
+            <ul id="password-requirements" class="mt-2 space-y-1">
+              <li
+                v-for="check in passwordChecks"
+                :key="check.label"
+                class="flex items-center gap-1.5 text-xs transition-colors"
+                :class="check.met ? 'text-game-success font-semibold' : 'text-brand-muted'"
+              >
+                <Check v-if="check.met" class="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                <Circle v-else class="w-3.5 h-3.5 shrink-0 opacity-50" aria-hidden="true" />
+                <span>{{ check.label }}</span>
+              </li>
+            </ul>
             <p v-if="fieldErrors.password" class="mt-1 text-xs font-medium text-game-error">
               {{ fieldErrors.password[0] }}
             </p>
@@ -148,10 +168,9 @@ async function handleSubmit() {
 
           <div>
             <BaseLabel for="register-password-confirmation">Confirmar contraseña</BaseLabel>
-            <BaseInput
+            <BasePasswordInput
               id="register-password-confirmation"
               v-model="form.password_confirmation"
-              type="password"
               autocomplete="new-password"
               placeholder="Repetí tu contraseña"
               :has-error="Boolean(fieldErrors.password)"

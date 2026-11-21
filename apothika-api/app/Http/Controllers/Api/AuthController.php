@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
 {
@@ -22,7 +23,7 @@ class AuthController extends Controller
             'name' => ['required', 'string', 'min:2', 'max:120'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'dni' => ['required', 'string', 'regex:/^[0-9]{7,9}$/', 'unique:users,dni'],
-            'password' => ['required', 'string', 'min:6', 'confirmed'],
+            'password' => ['required', 'string', 'confirmed', Password::min(8)->letters()->numbers()],
             'pharmacy_slug' => ['nullable', 'string', 'exists:pharmacies,slug'],
         ], [
             'name.required' => 'Ingresá tu nombre y apellido.',
@@ -35,6 +36,8 @@ class AuthController extends Controller
             'dni.unique' => 'Ya existe una cuenta registrada con ese DNI.',
             'password.required' => 'Ingresá una contraseña.',
             'password.min' => 'La contraseña debe tener al menos :min caracteres.',
+            'password.letters' => 'La contraseña debe incluir al menos una letra.',
+            'password.numbers' => 'La contraseña debe incluir al menos un número.',
             'password.confirmed' => 'Las contraseñas no coinciden.',
         ]);
 
