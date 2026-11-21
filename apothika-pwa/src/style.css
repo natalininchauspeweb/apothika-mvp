@@ -1,0 +1,132 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   1. TOKENS CSS DINÁMICOS (WHITE-LABEL B2C) Y FIJOS (B2B + GAMIFICACIÓN)
+   ========================================================================== */
+:root {
+  /* Marca Blanca B2C (valores iniciales: Farmacia Dalton) */
+  --brand-primary: #002D3A;
+  --brand-secondary: #28A2A5;
+  --brand-surface: #F2F4F6;
+  --brand-text: #002D3A;
+  --brand-muted: #5C6B73;
+
+  /* Identidad fija del panel B2B (APOTHIKA) */
+  --apothika-emerald: #165A4B;
+  --apothika-mint: #00D084;
+  --apothika-coral: #FF6B6B;
+  --apothika-charcoal: #212529;
+  --apothika-offwhite: #FBF9FA;
+
+  /* Semánticos fijos de Gamificación (compartidos en toda la plataforma) */
+  --game-success: #28A745;
+  --game-error: #DC3545;
+  --game-warning: #FFC107;
+  --game-gold: #FFD166;
+
+  /* Tipografía activa (se alterna mediante atributo data-font en <html>) */
+  --font-heading-active: 'Montserrat', system-ui, sans-serif;
+  --font-body-active: 'Poppins', system-ui, sans-serif;
+}
+
+/* ==========================================================================
+   2. PRESETS TIPOGRÁFICOS CURADOS (Protegen accesibilidad y legibilidad)
+   ========================================================================== */
+html[data-font="dalton"] {
+  --font-heading-active: 'Montserrat', system-ui, sans-serif;
+  --font-body-active: 'Poppins', system-ui, sans-serif;
+}
+
+html[data-font="apothika"] {
+  --font-heading-active: 'Albert Sans', system-ui, sans-serif;
+  --font-body-active: 'Source Sans 3', system-ui, sans-serif;
+}
+
+html[data-font="editorial"] {
+  --font-heading-active: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body-active: 'Inter', system-ui, sans-serif;
+}
+
+html[data-font="accessible"] {
+  --font-heading-active: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  --font-body-active: 'Atkinson Hyperlegible', system-ui, sans-serif;
+}
+
+/* ==========================================================================
+   3. CONEXIÓN CON TAILWIND CSS v4 (Clases utilitarias estáticas)
+   ========================================================================== */
+@theme inline {
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-secondary: var(--brand-secondary);
+  --color-brand-surface: var(--brand-surface);
+  --color-brand-text: var(--brand-text);
+  --color-brand-muted: var(--brand-muted);
+
+  --color-apothika-emerald: var(--apothika-emerald);
+  --color-apothika-mint: var(--apothika-mint);
+  --color-apothika-coral: var(--apothika-coral);
+  --color-apothika-charcoal: var(--apothika-charcoal);
+  --color-apothika-offwhite: var(--apothika-offwhite);
+
+  --color-game-success: var(--game-success);
+  --color-game-error: var(--game-error);
+  --color-game-warning: var(--game-warning);
+  --color-game-gold: var(--game-gold);
+
+  --font-heading: var(--font-heading-active);
+  --font-body: var(--font-body-active);
+}
+
+/* ==========================================================================
+   4. ESTILOS BASE, ACCESIBILIDAD Y COMPONENTES TÁCTILES ESTILO DUOLINGO
+   ========================================================================== */
+@layer base {
+  body {
+    font-family: var(--font-body-active);
+    background-color: var(--brand-surface);
+    color: var(--brand-text);
+    min-height: 100dvh;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-heading-active);
+  }
+
+  /* Foco visible de alto contraste para navegación por teclado (WCAG 2.1) */
+  :focus-visible {
+    outline: 3px solid var(--apothika-mint);
+    outline-offset: 2px;
+  }
+}
+
+/* Botón táctil 3D estilo Duolingo con feedback físico al presionar */
+.btn-duo {
+  border-bottom-width: 4px;
+  border-bottom-color: rgba(0, 0, 0, 0.22);
+  transition: transform 0.08s ease, filter 0.15s ease, border-bottom-width 0.08s ease;
+}
+
+.btn-duo:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.btn-duo:active:not(:disabled) {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+/* Tarjeta gamificada limpia con borde sutil y profundidad suave */
+.card-duo {
+  background-color: #FFFFFF;
+  border: 2px solid #E5E7EB;
+  border-bottom-width: 4px;
+  border-radius: 1.25rem;
+}
+
+/* Respeto a usuarios con sensibilidad al movimiento */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

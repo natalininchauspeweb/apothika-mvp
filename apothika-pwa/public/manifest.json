@@ -1,0 +1,20 @@
+{
+  "name": "APOTHIKA — Bienestar y Beneficios",
+  "short_name": "APOTHIKA",
+  "description": "Plataforma de fidelización gamificada y bienestar preventivo para farmacias.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FBF9FA",
+  "theme_color": "#165A4B",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/icons/apothika-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
