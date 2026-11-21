@@ -10,9 +10,12 @@ import { Sparkles, ShieldCheck } from 'lucide-vue-next';
         <span>Motor White-Label + PWA activo</span>
       </div>
 
-      <h1 class="text-3xl font-extrabold text-brand-primary">
-        APOTHIKA · Farmacia Dalton
-      </h1>
+  <h1 class="text-3xl font-extrabold text-brand-primary">
+  APOTHIKA
+</h1>
+<p class="text-base font-bold text-brand-secondary">
+  Farmacia Dalton
+</p>
 
       <h2 class="text-lg font-semibold text-brand-muted">
         Base visual lista para conectar con Laravel
