@@ -15,3 +15,12 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
+
+// Registramos el Service Worker solo en producción para no interferir con Vite HMR en desarrollo
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((error) => {
+      console.error('[PWA] Error al registrar Service Worker:', error);
+    });
+  });
+}

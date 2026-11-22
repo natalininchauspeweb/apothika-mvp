@@ -1,10 +1,13 @@
 <script setup>
-import { onMounted, provide, ref } from 'vue';
+import { computed, onMounted, provide, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   Gift,
   Home,
+  LayoutDashboard,
   LogOut,
+  Palette,
+  QrCode,
   Sparkles,
   Store,
   Ticket,
@@ -27,6 +30,17 @@ const PATIENT_NAV_ITEMS = [
   { name: 'patient.rewards', label: 'Beneficios', icon: Gift },
   { name: 'patient.coupons', label: 'Cupones', icon: Ticket },
 ];
+
+const PHARMACY_NAV_ITEMS = [
+  { name: 'pharmacy.dashboard', label: 'Resumen', icon: LayoutDashboard },
+  { name: 'pharmacy.counter', label: 'Mostrador', icon: QrCode },
+  { name: 'pharmacy.rewards', label: 'Beneficios', icon: Gift },
+  { name: 'pharmacy.branding', label: 'Marca', icon: Palette },
+];
+
+const activeNavItems = computed(() =>
+  loggedUser.value.role === 'pharmacy' ? PHARMACY_NAV_ITEMS : PATIENT_NAV_ITEMS
+);
 
 const feedback = ref({
   message: null,
@@ -77,8 +91,11 @@ onMounted(async () => {
   if (freshUser) {
     if (route.meta.theme === 'b2b' || freshUser.role === 'pharmacy') {
       applyPharmacyB2BTheme(freshUser.pharmacy);
+      document.title = route.meta.title ? `${route.meta.title} — APOTHIKA` : 'APOTHIKA';
     } else {
       applyPatientTheme(freshUser.pharmacy);
+      const brandName = freshUser.pharmacy?.name || pharmacyBranding.value.name || 'APOTHIKA';
+      document.title = route.meta.title ? `${route.meta.title} — ${brandName}` : brandName;
     }
   } else if (route.meta.requiresAuth) {
     await router.push({ name: 'login' });
@@ -89,7 +106,7 @@ onMounted(async () => {
 <template>
   <div
     class="min-h-dvh flex flex-col bg-brand-surface text-brand-text transition-colors duration-200"
-    :class="loggedUser.role === 'patient' ? 'pb-20 md:pb-8' : 'pb-8'"
+    :class="loggedUser.id ? 'pb-20 md:pb-8' : 'pb-8'"
   >
     <!-- Encabezado superior -->
     <header
@@ -102,33 +119,49 @@ onMounted(async () => {
           :to="loggedUser.role === 'pharmacy' ? { name: 'pharmacy.dashboard' } : { name: 'patient.home' }"
           class="inline-flex items-center gap-2.5 font-heading font-extrabold text-lg tracking-tight shrink-0"
         >
+          <!-- Logo dinámico en vista Paciente (B2C) -->
           <span
+            v-if="loggedUser.role !== 'pharmacy' && pharmacyBranding.logo_url"
+            class="h-9 px-1.5 py-1 rounded-xl bg-white inline-flex items-center justify-center shrink-0 shadow-xs"
+          >
+            <img
+              :src="pharmacyBranding.logo_url"
+              :alt="`Logo de ${pharmacyBranding.name}`"
+              class="h-full w-auto max-w-24 object-contain"
+            />
+          </span>
+
+          <!-- Ícono de respaldo si no hay logo o si está en panel B2B APOTHIKA -->
+          <span
+            v-else
             class="w-8 h-8 rounded-xl inline-flex items-center justify-center shrink-0"
             :class="loggedUser.role === 'pharmacy' ? 'bg-apothika-mint text-apothika-emerald' : 'bg-brand-secondary text-white'"
           >
             <Store v-if="loggedUser.role === 'pharmacy'" class="w-4 h-4" aria-hidden="true" />
             <User v-else class="w-4 h-4" aria-hidden="true" />
           </span>
+
           <span>
             {{ loggedUser.role === 'pharmacy' ? 'APOTHIKA' : pharmacyBranding.name }}
           </span>
         </RouterLink>
 
-        <!-- Navegación de escritorio para Pacientes (B2C) -->
+        <!-- Navegación de escritorio (B2C y B2B) -->
         <nav
-          v-if="loggedUser.role === 'patient'"
           aria-label="Navegación principal"
           class="hidden md:flex items-center gap-1"
         >
           <RouterLink
-            v-for="item in PATIENT_NAV_ITEMS"
+            v-for="item in activeNavItems"
             :key="item.name"
             :to="{ name: item.name }"
             :aria-current="route.name === item.name ? 'page' : undefined"
             class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition"
             :class="
               route.name === item.name
-                ? 'bg-brand-secondary text-white'
+                ? loggedUser.role === 'pharmacy'
+                  ? 'bg-apothika-mint text-apothika-emerald'
+                  : 'bg-brand-secondary text-white'
                 : 'text-white/80 hover:bg-white/10 hover:text-white'
             "
           >
@@ -154,29 +187,36 @@ onMounted(async () => {
       </div>
     </header>
 
-    <!-- Notificación global inyectada vía provide/inject -->
-    <div v-if="feedback.message" class="max-w-3xl w-full mx-auto px-4 pt-4">
-      <NotificationBox :content="feedback" @close="clearFeedback" />
+    <!-- Notificación global flotante (siempre visible sin importar el scroll) -->
+    <div
+      v-if="feedback.message"
+      class="fixed top-20 inset-x-0 z-40 px-4 pointer-events-none"
+    >
+      <div class="max-w-3xl mx-auto pointer-events-auto shadow-lg rounded-2xl bg-white">
+        <NotificationBox :content="feedback" @close="clearFeedback" />
+      </div>
     </div>
 
     <!-- Vista activa -->
     <RouterView />
 
-    <!-- Barra de navegación inferior móvil para Pacientes (B2C) -->
+    <!-- Barra de navegación inferior móvil (B2C y B2B) -->
     <nav
-      v-if="loggedUser.role === 'patient'"
+      v-if="loggedUser.id"
       aria-label="Navegación móvil"
       class="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t-2 border-gray-200 px-2 py-1.5"
     >
       <ul class="grid grid-cols-4 gap-1 max-w-md mx-auto">
-        <li v-for="item in PATIENT_NAV_ITEMS" :key="item.name">
+        <li v-for="item in activeNavItems" :key="item.name">
           <RouterLink
             :to="{ name: item.name }"
             :aria-current="route.name === item.name ? 'page' : undefined"
             class="flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl text-[11px] font-bold transition"
             :class="
               route.name === item.name
-                ? 'text-brand-secondary bg-brand-secondary/10'
+                ? loggedUser.role === 'pharmacy'
+                  ? 'text-apothika-emerald bg-apothika-mint/20'
+                  : 'text-brand-secondary bg-brand-secondary/10'
                 : 'text-brand-muted hover:text-brand-primary'
             "
           >

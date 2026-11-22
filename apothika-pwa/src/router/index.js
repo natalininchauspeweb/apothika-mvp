@@ -9,6 +9,9 @@ import PatientTriviasView from '../views/patient/PatientTriviasView.vue';
 import PatientRewardsView from '../views/patient/PatientRewardsView.vue';
 import PatientCouponsView from '../views/patient/PatientCouponsView.vue';
 import PharmacyDashboardView from '../views/pharmacy/PharmacyDashboardView.vue';
+import PharmacyCounterView from '../views/pharmacy/PharmacyCounterView.vue';
+import PharmacyRewardsView from '../views/pharmacy/PharmacyRewardsView.vue';
+import PharmacyBrandingView from '../views/pharmacy/PharmacyBrandingView.vue';
 
 const routes = [
   {
@@ -95,6 +98,39 @@ const routes = [
       role: 'pharmacy',
       theme: 'b2b',
       title: 'Panel Farmacia',
+    },
+  },
+  {
+    path: '/farmacia/mostrador',
+    name: 'pharmacy.counter',
+    component: PharmacyCounterView,
+    meta: {
+      requiresAuth: true,
+      role: 'pharmacy',
+      theme: 'b2b',
+      title: 'Mostrador',
+    },
+  },
+  {
+    path: '/farmacia/beneficios',
+    name: 'pharmacy.rewards',
+    component: PharmacyRewardsView,
+    meta: {
+      requiresAuth: true,
+      role: 'pharmacy',
+      theme: 'b2b',
+      title: 'Beneficios',
+    },
+  },
+  {
+    path: '/farmacia/marca',
+    name: 'pharmacy.branding',
+    component: PharmacyBrandingView,
+    meta: {
+      requiresAuth: true,
+      role: 'pharmacy',
+      theme: 'b2b',
+      title: 'Marca Blanca',
     },
   },
   {
